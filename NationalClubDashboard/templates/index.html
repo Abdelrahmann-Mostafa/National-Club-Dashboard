@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Club Command Center</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@300;500;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/radar.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/hierarchy.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Dark.js"></script>
+
+    <style>
+        /* CSS Variables for Theming */
+        :root {
+            /* Default Dark Theme */
+            --bg-color: #0b0c15;
+            --card-bg: #151621;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #6366f1;
+            --accent-2: #10b981;
+            --border-color: #333;
+            --select-bg: #151621;
+        }
+
+        /* Light Theme Override */
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --accent: #4f46e5;
+            --accent-2: #059669;
+            --border-color: #e2e8f0;
+            --select-bg: #ffffff;
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            font-family: 'Open Sans', sans-serif; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        h1, h2, h3, h4, h5 { font-family: 'Teko', sans-serif; text-transform: uppercase; letter-spacing: 1px; color: var(--text-main); }
+        
+        .dashboard-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-top: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .dashboard-card:hover { border-top-color: var(--accent); transform: translateY(-2px); }
+        
+        .chart-h { height: 300px; width: 100%; }
+        .chart-h-lg { height: 400px; width: 100%; }
+        
+        .kpi-val { font-size: 2.5rem; font-weight: bold; color: var(--accent-2); font-family: 'Teko'; line-height: 1; }
+        .kpi-lbl { color: var(--text-muted); font-size: 0.85rem; }
+        
+        /* Interactive Elements */
+        .custom-select {
+            background-color: var(--select-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 15px;
+            border-radius: 5px;
+        }
+        
+        .theme-btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Bootstrap Text Override */
+        .text-muted { color: var(--text-muted) !important; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="m-0">🚀 Club Command Center</h1>
+            <p class="text-muted m-0">Real-time Performance & Financial Analytics</p>
+        </div>
+        <div class="d-flex gap-3 align-items-center">
+            <button id="themeToggle" class="theme-btn" onclick="toggleTheme()">
+                <i class="fas fa-moon"></i> Dark Mode
+            </button>
+            
+            <div>
+                <select id="branchFilter" class="custom-select" aria-label="Filter Dashboard by Branch">
+                    <option value="All">All Branches</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="row text-center mb-2">
+        <div class="col-md-2">
+            <div class="dashboard-card py-3">
+                <div class="kpi-lbl">Active Players</div>
+                <div class="kpi-val" id="kpi-players">0</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="dashboard-card py-3">
+                <div class="kpi-lbl">Avg Performance</div>
+                <div class="kpi-val" id="kpi-perf">0%</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="dashboard-card py-3">
+                <div class="kpi-lbl">Total Revenue</div>
+                <div class="kpi-val" id="kpi-rev">$0M</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="dashboard-card py-3">
+                <div class="kpi-lbl">Avg Age</div>
+                <div class="kpi-val" id="kpi-age">0</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card py-2" style="height: 106px;">
+                <h6 class="text-start ps-2 mb-0">Club Health (Avg Attendance)</h6>
+                <div id="gaugeChart" style="height: 80px; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="dashboard-card">
+                <h5>📈 Growth Trend: New Members (Time Series)</h5>
+                <div id="lineChart" class="chart-h"></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="dashboard-card">
+                <h5>💳 Membership Status (Donut)</h5>
+                <div id="donutChart" class="chart-h"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="dashboard-card">
+                <h5>💸 Pay vs. Performance Analysis</h5>
+                <p class="small text-muted">X: Performance Score | Y: Income | Color: Rank</p>
+                <div id="bubbleChart" class="chart-h-lg"></div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="dashboard-card">
+                <h5>📊 Branch Composition by Rank (Stacked Bar)</h5>
+                <div id="stackedBarChart" class="chart-h-lg"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="dashboard-card">
+                <h5>📦 Income Distribution per Game</h5>
+                <div id="boxChart" class="chart-h"></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="dashboard-card">
+                <h5>🌳 Game Popularity (Treemap)</h5>
+                <div id="treeChart" class="chart-h"></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="dashboard-card">
+                <h5>⚡ Performance Gap (Dumbbell Plot)</h5>
+                <div id="rangeChart" class="chart-h"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let globalData = [];
+    let rootList = {}; 
+    let isDarkMode = true;
+
+    // --- FETCH DATA ---
+    fetch('/api/data')
+    .then(response => response.json())
+    .then(data => {
+        globalData = data;
+        
+        let uniqueBranches = [...new Set(data.map(item => item.Branch))];
+        let select = document.getElementById('branchFilter');
+        select.innerHTML = '<option value="All">All Branches</option>'; 
+        uniqueBranches.forEach(b => {
+            let opt = document.createElement('option');
+            opt.value = b;
+            opt.innerHTML = b;
+            select.appendChild(opt);
+        });
+
+        am5.ready(function() {
+            updateDashboard("All");
+        });
+
+        select.addEventListener('change', (e) => updateDashboard(e.target.value));
+    });
+
+    // --- THEME TOGGLE ---
+    function toggleTheme() {
+        isDarkMode = !isDarkMode;
+        let btn = document.getElementById('themeToggle');
+        if(btn) {
+            if (isDarkMode) {
+                document.documentElement.removeAttribute("data-theme");
+                btn.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+            } else {
+                document.documentElement.setAttribute("data-theme", "light");
+                btn.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+            }
+        }
+        let currentBranch = document.getElementById('branchFilter').value;
+        updateDashboard(currentBranch);
+    }
+
+    function updateDashboard(branch) {
+        let d = (branch === "All") ? globalData : globalData.filter(x => x.Branch === branch);
+
+        // 1. Calculate KPIs
+        document.getElementById('kpi-players').innerText = d.length;
+        let avgPerf = d.length > 0 ? d.reduce((a,b) => a + (b.PerformanceScore || 0), 0) / d.length : 0;
+        document.getElementById('kpi-perf').innerText = Math.round(avgPerf) + "%";
+        let totalRev = d.reduce((a,b) => a + (b.Income || 0), 0);
+        document.getElementById('kpi-rev').innerText = "$" + (totalRev/1000000).toFixed(2) + "M";
+        let avgAge = d.length > 0 ? d.reduce((a,b) => a + (b.Age || 0), 0) / d.length : 0;
+        document.getElementById('kpi-age').innerText = Math.round(avgAge);
+        let avgAtt = d.length > 0 ? d.reduce((a,b) => a + (b.Attendance || 0), 0) / d.length : 0;
+
+        // 2. Render Charts
+        safeRender(renderHealthBar, avgAtt, "Club Health");
+        safeRender(renderLineChart, d, "Line Chart");
+        safeRender(renderDonut, d, "Donut Chart");
+        safeRender(renderScatter, d, "Pay vs Perf Chart"); // NEW CHART
+        safeRender(renderStackedBar, d, "Stacked Bar Chart");
+        safeRender(renderSimpleBar, d, "Income Bar Chart");
+        safeRender(renderTreemap, d, "Treemap");
+        safeRender(renderDumbbellChart, d, "Dumbbell Chart");
+    }
+
+    function safeRender(fn, data, name) {
+        try { fn(data); } catch (e) { console.warn(`Skipping ${name}: Data missing or error.`, e); }
+    }
+
+    function createRoot(id) {
+        if (rootList[id]) rootList[id].dispose();
+        let root = am5.Root.new(id);
+        let themes = [am5themes_Animated.new(root)];
+        if (isDarkMode) themes.push(am5themes_Dark.new(root));
+        root.setThemes(themes);
+        rootList[id] = root;
+        return root;
+    }
+
+    // --- 1. HEALTH BAR ---
+    function renderHealthBar(val) {
+        let root = createRoot("gaugeChart");
+        let chart = root.container.children.push(am5xy.XYChart.new(root, { panX: false, panY: false, wheelX: "none", wheelY: "none", paddingLeft: 0, paddingRight: 0 }));
+        let yAxis = chart.yAxes.push(am5xy.CategoryAxis.new(root, { categoryField: "category", renderer: am5xy.AxisRendererY.new(root, { minGridDistance: 10 }) }));
+        yAxis.get("renderer").grid.template.set("visible", false);
+        yAxis.get("renderer").labels.template.set("visible", false);
+        let xAxis = chart.xAxes.push(am5xy.ValueAxis.new(root, { min: 0, max: 100, strictMinMax: true, renderer: am5xy.AxisRendererX.new(root, {}) }));
+        xAxis.get("renderer").grid.template.set("visible", false);
+        xAxis.get("renderer").labels.template.set("visible", false);
+        let data = [{ category: "Health", value: Math.round(val) }];
+        yAxis.data.setAll(data);
+        let seriesBg = chart.series.push(am5xy.ColumnSeries.new(root, { xAxis: xAxis, yAxis: yAxis, valueXField: "full", categoryYField: "category" }));
+        seriesBg.columns.template.setAll({ height: 30, cornerRadiusTL: 5, cornerRadiusTR: 5, cornerRadiusBL: 5, cornerRadiusBR: 5, fillOpacity: 0.2, strokeOpacity: 0 });
+        seriesBg.data.setAll([{ category: "Health", full: 100 }]);
+        let series = chart.series.push(am5xy.ColumnSeries.new(root, { xAxis: xAxis, yAxis: yAxis, valueXField: "value", categoryYField: "category" }));
+        series.columns.template.setAll({ height: 30, cornerRadiusTL: 5, cornerRadiusTR: 5, cornerRadiusBL: 5, cornerRadiusBR: 5, strokeOpacity: 0 });
+        series.columns.template.adapters.add("fill", function(fill, target) {
+            if (val < 50) return am5.color(0xef4444); if (val < 80) return am5.color(0xeab308); return am5.color(0x10b981);
+        });
+        series.bullets.push(function() {
+            return am5.Bullet.new(root, { locationX: 1, sprite: am5.Label.new(root, { text: "{valueX}%", fill: isDarkMode ? am5.color(0xffffff) : am5.color(0x000000), centerY: am5.p50, centerX: am5.p100, dx: -10, populateText: true, fontWeight: "bold" }) });
+        });
+        series.data.setAll(data);
+        series.appear(1000);
+        chart.appear(1000, 100);
+    }
+
+    // --- 2. LINE CHART ---
+    function renderLineChart(data) {
+        let root = createRoot("lineChart");
+        let dateCounts = {};
+        if(!data[0].JoinDate) throw new Error("Missing JoinDate");
+        data.forEach(x => { let ym = x.JoinDate.substring(0, 7); dateCounts[ym] = (dateCounts[ym] || 0) + 1; });
+        let chartData = Object.keys(dateCounts).sort().map(k => ({ date: new Date(k + "-01").getTime(), value: dateCounts[k] }));
+        let chart = root.container.children.push(am5xy.XYChart.new(root, { panX: true, wheelX: "panX" }));
+        let xAxis = chart.xAxes.push(am5xy.DateAxis.new(root, { baseInterval: { timeUnit: "month", count: 1 }, renderer: am5xy.AxisRendererX.new(root, {}) }));
+        let yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { renderer: am5xy.AxisRendererY.new(root, {}) }));
+        let series = chart.series.push(am5xy.SmoothedXLineSeries.new(root, { xAxis: xAxis, yAxis: yAxis, valueYField: "value", valueXField: "date", tooltip: am5.Tooltip.new(root, { labelText: "{valueY} Joined" }) }));
+        series.strokes.template.setAll({ strokeWidth: 3 });
+        series.fills.template.setAll({ visible: true, fillOpacity: 0.2 });
+        series.data.setAll(chartData);
+        series.appear(1000);
+    }
+
+    // --- 3. DONUT CHART ---
+    function renderDonut(data) {
+        let root = createRoot("donutChart");
+        let chart = root.container.children.push(am5percent.PieChart.new(root, { innerRadius: am5.percent(50) }));
+        let counts = {};
+        data.forEach(x => counts[x.MembershipType] = (counts[x.MembershipType] || 0) + 1);
+        let chartData = Object.keys(counts).map(k => ({ category: k, value: counts[k] }));
+        let series = chart.series.push(am5percent.PieSeries.new(root, { valueField: "value", categoryField: "category" }));
+        series.data.setAll(chartData);
+        series.appear(1000, 100);
+    }
+
+    // --- 4. NEW: PAY VS PERFORMANCE SCATTER ---
+    function renderScatter(data) {
+        let root = createRoot("bubbleChart");
+        let chart = root.container.children.push(am5xy.XYChart.new(root, { panX: true, panY: true, wheelY: "zoomXY", pinchZoomX:true, pinchZoomY:true }));
+        
+        // Cursor
+        let cursor = chart.set("cursor", am5xy.XYCursor.new(root, { behavior: "zoomXY" }));
+        cursor.lineY.set("visible", false);
+        cursor.lineX.set("visible", false);
+
+        // Axes
+        let xAxis = chart.xAxes.push(am5xy.ValueAxis.new(root, { 
+            renderer: am5xy.AxisRendererX.new(root, {}), tooltip: am5.Tooltip.new(root, {}) 
+        }));
+        xAxis.children.push(am5.Label.new(root, { text: "Performance Score (0-100)", x: am5.p50, centerX: am5.p50 }));
+
+        let yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { 
+            renderer: am5xy.AxisRendererY.new(root, {}), tooltip: am5.Tooltip.new(root, {}) 
+        }));
+        yAxis.children.push(am5.Label.new(root, { text: "Income ($)", rotation: -90, y: am5.p50, centerX: am5.p50 }));
+
+        // Series
+        let series = chart.series.push(am5xy.LineSeries.new(root, {
+            calculateAggregates: true, xAxis: xAxis, yAxis: yAxis, 
+            valueYField: "Income", valueXField: "PerformanceScore",
+            tooltip: am5.Tooltip.new(root, { 
+                labelText: "[bold]{PlayerName}[/]\nRank: {Rank}\nScore: {valueX}\nIncome: ${valueY}" 
+            })
+        }));
+
+        // Dots
+        series.strokes.template.set("visible", false);
+        series.bullets.push(function() {
+            return am5.Bullet.new(root, {
+                sprite: am5.Circle.new(root, { 
+                    radius: 5, 
+                    fillOpacity: 0.7,
+                    strokeOpacity: 0,
+                    templateField: "bulletSettings" 
+                })
+            });
+        });
+
+        // Color Coding by Rank
+        let rankColors = {
+            "Junior": am5.color(0x6366f1),     // Indigo
+            "Amateur": am5.color(0x3b82f6),    // Blue
+            "Semi-Pro": am5.color(0x10b981),   // Green
+            "Professional": am5.color(0xf59e0b), // Yellow/Orange
+            "Captain": am5.color(0xef4444)     // Red
+        };
+
+        let processedData = data.map(x => ({
+            ...x, 
+            bulletSettings: { fill: rankColors[x.Rank] || am5.color(0xcccccc) }
+        }));
+        
+        series.data.setAll(processedData);
+        series.appear(1000);
+        chart.appear(1000, 100);
+    }
+
+    // --- 5. STACKED BAR CHART ---
+    function renderStackedBar(data) {
+        let root = createRoot("stackedBarChart");
+        let chart = root.container.children.push(am5xy.XYChart.new(root, { panX: false, panY: false, wheelX: "panY", wheelY: "zoomY", layout: root.verticalLayout }));
+        let legend = chart.children.push(am5.Legend.new(root, { centerX: am5.p50, x: am5.p50 }));
+        let yAxis = chart.yAxes.push(am5xy.CategoryAxis.new(root, { categoryField: "Branch", renderer: am5xy.AxisRendererY.new(root, { cellStartLocation: 0.1, cellEndLocation: 0.9 }), tooltip: am5.Tooltip.new(root, {}) }));
+        let xAxis = chart.xAxes.push(am5xy.ValueAxis.new(root, { renderer: am5xy.AxisRendererX.new(root, {}) }));
+        let branchData = {};
+        let ranks = ['Junior', 'Amateur', 'Semi-Pro', 'Professional', 'Captain'];
+        data.forEach(d => { if (!branchData[d.Branch]) branchData[d.Branch] = { Branch: d.Branch, Total: 0 }; branchData[d.Branch][d.Rank] = (branchData[d.Branch][d.Rank] || 0) + 1; branchData[d.Branch].Total += 1; });
+        let chartData = Object.values(branchData);
+        chartData.sort((a,b) => a.Total - b.Total);
+        yAxis.data.setAll(chartData);
+        ranks.forEach(rank => {
+            let series = chart.series.push(am5xy.ColumnSeries.new(root, { name: rank, xAxis: xAxis, yAxis: yAxis, valueXField: rank, categoryYField: "Branch", stacked: true, tooltip: am5.Tooltip.new(root, { labelText: "{name}: {valueX}" }) }));
+            series.data.setAll(chartData);
+            legend.data.push(series);
+        });
+        chart.appear(1000, 100);
+    }
+
+    // --- 6. INCOME BAR CHART ---
+    function renderSimpleBar(data) {
+        let root = createRoot("boxChart");
+        let chart = root.container.children.push(am5xy.XYChart.new(root, { panX: true, wheelX: "panX" }));
+        let xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, { categoryField: "Game", renderer: am5xy.AxisRendererX.new(root, { minGridDistance: 30 }) }));
+        let yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { numberFormat: "'$'#a", renderer: am5xy.AxisRendererY.new(root, {}) }));
+        let series = chart.series.push(am5xy.ColumnSeries.new(root, { name: "Income", xAxis: xAxis, yAxis: yAxis, valueYField: "avg", categoryXField: "Game", tooltip: am5.Tooltip.new(root, { labelText: "${valueY}" }) }));
+        let gameData = [];
+        [...new Set(data.map(x => x.Game))].forEach(g => {
+            let incomes = data.filter(x => x.Game === g).map(x => x.Income);
+            let avg = incomes.length ? Math.round(incomes.reduce((a, b) => a + b, 0) / incomes.length) : 0;
+            gameData.push({ Game: g, avg: avg });
+        });
+        gameData.sort((a,b) => b.avg - a.avg);
+        xAxis.data.setAll(gameData);
+        series.data.setAll(gameData);
+        series.appear(1000);
+    }
+
+    // --- 7. TREEMAP ---
+    function renderTreemap(data) {
+        let root = createRoot("treeChart");
+        let treeData = { name: "Root", children: [] };
+        let games = {};
+        data.forEach(d => games[d.Game] = (games[d.Game] || 0) + 1);
+        Object.keys(games).forEach(g => treeData.children.push({ name: g, value: games[g] }));
+        let series = root.container.children.push(am5hierarchy.Treemap.new(root, { valueField: "value", categoryField: "name", childDataField: "children" }));
+        series.get("colors").set("colors", [ am5.color(0x6366f1), am5.color(0x8b5cf6), am5.color(0xd946ef), am5.color(0x06b6d4), am5.color(0x10b981) ]);
+        series.data.setAll([treeData]);
+    }
+
+    // --- 8. DUMBBELL PLOT ---
+    function renderDumbbellChart(data) {
+        let root = createRoot("rangeChart");
+        let chart = root.container.children.push(am5xy.XYChart.new(root, { panX: false, panY: false, wheelX: "panX", wheelY: "zoomX" }));
+        let yAxis = chart.yAxes.push(am5xy.CategoryAxis.new(root, { categoryField: "Rank", renderer: am5xy.AxisRendererY.new(root, { cellStartLocation: 0.1, cellEndLocation: 0.9 }), tooltip: am5.Tooltip.new(root, {}) }));
+        let xAxis = chart.xAxes.push(am5xy.ValueAxis.new(root, { renderer: am5xy.AxisRendererX.new(root, {}) }));
+        let rankData = [];
+        ['Junior', 'Amateur', 'Semi-Pro', 'Professional', 'Captain'].forEach(r => {
+            let scores = data.filter(x => x.Rank === r).map(x => x.PerformanceScore || 0);
+            if (scores.length > 0) rankData.push({ Rank: r, min: Math.min(...scores), max: Math.max(...scores) });
+        });
+        yAxis.data.setAll(rankData);
+        let series = chart.series.push(am5xy.ColumnSeries.new(root, { xAxis: xAxis, yAxis: yAxis, valueXField: "max", openValueXField: "min", categoryYField: "Rank", tooltip: am5.Tooltip.new(root, { labelText: "Gap: {openValueX} - {valueX}" }) }));
+        series.columns.template.setAll({ height: 2, fillOpacity: 1, strokeOpacity: 0 });
+        series.data.setAll(rankData);
+        series.bullets.push(function () { return am5.Bullet.new(root, { locationX: 0, sprite: am5.Circle.new(root, { radius: 6, fill: am5.color(0xff6b6b) }) }); });
+        series.bullets.push(function () { return am5.Bullet.new(root, { locationX: 1, sprite: am5.Circle.new(root, { radius: 6, fill: am5.color(0x51cf66) }) }); });
+        chart.appear(1000, 100);
+    }
+</script>
+</body>
+</html>
